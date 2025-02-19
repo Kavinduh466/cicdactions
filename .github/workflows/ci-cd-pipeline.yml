@@ -32,7 +32,6 @@ jobs:
       - name: Submit dependency snapshot
         uses: advanced-security/maven-dependency-submission-action@v3
 
-
       - name:  Install Docker
         run: |
           sudo apt-get update
