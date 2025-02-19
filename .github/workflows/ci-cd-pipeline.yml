@@ -7,15 +7,15 @@ on:
 
 jobs:
   build:
-    runs-on: ${{matrix.os}}
+    runs-on: ${{ matrix.os }}
     permissions:
       contents: write
       security-events: write
-      
 
     strategy:
       matrix:
-        os: [ubuntu-latest, macOS-latest ,windows-latest]
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -32,18 +32,46 @@ jobs:
       - name: Submit dependency snapshot
         uses: advanced-security/maven-dependency-submission-action@v3
 
-      - name:  Install Docker (Official Method)
+      - name: Install Docker
         run: |
-          sudo apt-get update
-          sudo apt-get remove -y containerd.io || true
-          curl -fsSL https://get.docker.com | sudo bash
-          sudo systemctl start docker
-          sudo systemctl enable docker
+          # Ubuntu (Linux)
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get update
+            sudo apt-get remove -y containerd.io || true
+            curl -fsSL https://get.docker.com | sudo bash
+            sudo systemctl start docker
+            sudo systemctl enable docker
+          fi
+
+          # macOS
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install --cask docker
+            open --background -a Docker
+            while ! docker info > /dev/null 2>&1; do
+              echo "Waiting for Docker to start..."
+              sleep 5
+            done
+          fi
+
+          # Windows (with Docker Desktop for Windows)
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            choco install docker-desktop
+            Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe" -ArgumentList "start"
+            while (-not (docker info)) {
+              Write-Host "Waiting for Docker to start..."
+              Start-Sleep -Seconds 5
+            }
+          fi
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and Push Docker Image
         uses: mr-smithers-excellent/docker-build-push@v4
         with:
-            image: kavindudevops/cicdyml
-            registry: docker.io
-            username: ${{ secrets.DOCKER_USERNAME }}
-            password: ${{ secrets.DOCKER_PASSWORD }}
+          image: kavindudevops/cicdyml
+          registry: docker.io
+          tag: main-${{ github.sha }}
