@@ -32,10 +32,11 @@ jobs:
       - name: Submit dependency snapshot
         uses: advanced-security/maven-dependency-submission-action@v3
 
-      - name:  Install Docker
+      - name:  Install Docker (Official Method)
         run: |
           sudo apt-get update
-          sudo apt-get install -y docker.io
+          sudo apt-get remove -y containerd.io || true
+          curl -fsSL https://get.docker.com | sudo bash
           sudo systemctl start docker
           sudo systemctl enable docker
 
